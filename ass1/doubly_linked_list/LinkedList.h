@@ -102,21 +102,69 @@ void appendLeft(struct DoublyLinkedList* list, struct Data data) {
 // Pops the current head of the linked list
 // Stores the popped data in the variable pointed to by popped
 // Return 0 if the popping worked, 1 if you tried to pop from an empty list (do not exit)
-int pop(struct DoublyLinkedList* list, struct Data* popped) {
+int pop(struct DoublyLinkedList* list, struct Data* val) {
+
+  //if the end attr of list is NULL, then abort
   if (!list->end) {
     return 1;
   }
 
-  struct Node *oldEnd = list->end;
-  list->end = list->end->prev;
-  *popped = oldEnd->data;
-  free(oldEnd);
-  if(!(list->end)) {
-    list->start = 0;
-  } else {
-    list->end->next = 0; 
+  //save the to be popped node
+  struct Node * startNode = list->start;
+  struct Node * nextNode = startNode->next;
+
+  //remember the value that we pop
+  *val = startNode->data;
+
+  //move the start pointer
+  list->start = startNode;
+
+  //if only 1 node is present in the doubly linked list
+  // if(!prevNode) {
+  //   list->start = NULL;
+  //   list->end = NULL;
+  // }
+  // else {
+  //   list->end->next = NULL;
+  // }
+
+
+  free(endNode);
+  return 0;
+}
+
+
+
+
+
+int popRight(struct DoublyLinkedList* list, struct Data* val) {
+
+  //if the end attr of list is NULL, then abort
+  if (!list->end) {
+    return 1;
   }
 
+  //save the to be popped node
+  struct Node * endNode = list->end;
+  struct Node * prevNode = endNode->prev;
+
+  //remember the value that we pop
+  *val = endNode->data;
+
+  //move the end pointer
+  list->end = prevNode;
+
+  //if only 1 node is present in the doubly linked list
+  if(!prevNode) {
+    list->start = NULL;
+    list->end = NULL;
+  }
+  else {
+    list->end->next = NULL;
+  }
+
+
+  free(endNode);
   return 0;
 }
 
