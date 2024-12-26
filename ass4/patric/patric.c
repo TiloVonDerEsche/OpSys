@@ -17,6 +17,9 @@ struct state {
   int active, finished;
 } state;
 
+sem_t worker_semaphore;
+sem_t callback_semaphore;
+sem_t printer_semaphore;
 
 int isNumber(char* str) {
   char c = '\0';
@@ -34,7 +37,7 @@ int isNumber(char* str) {
 
 
   if (isNumber == 0) {
-    printf("String: %s must only consist of digits!\n",str);
+    fprintf(stderr,"String: %s must only consist of digits!\n",str);
     return 0;
   }
 
@@ -57,18 +60,12 @@ void print_triangle(struct triangle* tri) {
  * @param interior Found points in the interior of the triangle
  */
 static void calc_finished_cb(int boundary, int interior) {
-  sem_t semaphore;
-  sem_init(&semaphore, 0, 1); // Initialize semaphore with a value of 1
 
-  sem_wait(&semaphore);
+  sem_wait(&callback_semaphore);
     state.interior += interior;
     state.boundary += boundary;
-  sem_post(&semaphore);
+  sem_post(&callback_semaphore);
 
-  //printf("boundary: %d, interior: %d, state.boundary: %d, state.interior: %d\n",
-   //boundary, interior, state.boundary, state.interior);
-
-  sem_destroy(&semaphore);
 }
 
 
@@ -82,23 +79,19 @@ static void calc_finished_cb(int boundary, int interior) {
 static void* worker(void* param) {
   struct triangle* tri = (struct triangle*) param;
 
-  sem_t semaphore;
-  sem_init(&semaphore, 0, 1); // Initialize semaphore with a value of 1
-
-  sem_wait(&semaphore);
+  sem_wait(&worker_semaphore);
   state.active++;
-  sem_post(&semaphore);
+  sem_post(&worker_semaphore);
 
   //get points
   countPoints(tri, calc_finished_cb);
 
-  sem_wait(&semaphore);
+  sem_wait(&worker_semaphore);
   state.active--;
   state.finished++;
+  sem_post(&worker_semaphore);
 
-  sem_post(&semaphore);
-
-  sem_destroy(&semaphore);
+  sem_post(&printer_semaphore); //trigger the printer thread
 }
 
 /**
@@ -107,12 +100,19 @@ static void* worker(void* param) {
 **/
 static void* printer(void* param) {
 
-  printf("Found %d boundary and %d interior points, %d active threads, %d finished threads",
-        state.boundary,
-        state.interior,
-        state.active,
-        state.finished
-        );
+  while(1) {
+    sem_wait(&printer_semaphore);
+
+    printf("Found %d boundary and %d interior points, %d active threads, %d finished threads\n",
+          state.boundary,
+          state.interior,
+          state.active,
+          state.finished
+          );
+
+    sleep(0.01);
+  }
+
 }
 
 
@@ -135,14 +135,18 @@ void scan_tri() {
     pthread_t tid;
     pthread_create(&tid, NULL, worker, (void*)tri);
   }
+  else {
+    fprintf(stderr, "stdin input is expected in format: '(int,int),(int,int),(int,int)\\n'\n");
+  }
 
   //go to the next line
+  //remove the remaining chars from stdin
   while(1) {
     char c = getchar();
     if (c == EOF) {
-      void* temp;
-      printer(temp);
-
+      sem_destroy(&worker_semaphore);
+      sem_destroy(&callback_semaphore);
+      sem_destroy(&printer_semaphore);
       exit(0);
     }
     if(c == '\n') {
@@ -150,7 +154,6 @@ void scan_tri() {
     }
   }
 
-  //TODO: drain the end of the line (should only contain \n or EOF)
 
 }
 
@@ -160,11 +163,17 @@ int main(int argc, char * argv[]) {
     return 1;
   }
   if (!isNumber(argv[1])) {
-    fprintf(stderr,"<num of worker threads> must be an integer!\n");
+    fprintf(stderr,"Warning: <num of worker threads> must be an integer!\n");
     return 1;
   }
   int thread_num = atoi(argv[1]);
-  //pthread_t thread_ids[thread_num];
+
+  sem_init(&worker_semaphore, 0, 1);
+  sem_init(&callback_semaphore, 0, 1);
+  sem_init(&printer_semaphore, 0, 0);
+
+  pthread_t tid;
+  pthread_create(&tid, NULL, printer, NULL);
 
   while(1) {
     //ensure that thread_num isn't exceeded
