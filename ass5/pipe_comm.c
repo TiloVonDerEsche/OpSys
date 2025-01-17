@@ -1,9 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <semaphore.h>
 
 // Our pipe file descriptors
 static int pipefd_ptc[2], pipefd_ctp[2];
+
+sem_t parent_sem;
+sem_t child_sem;
 
 void static die(char *msg){
     perror("pipe");
@@ -26,8 +30,24 @@ void create_pipes() {
  */
 void tell_parent() {
   write(pipefd_ptc[1],"Pong!",6);
-  printf("Child sent a message to parent!\n");
 
+
+  //printf("Child sent a message to parent!\n");
+  printf("Child: Pong!\n");//ToDo:Remove
+  sem_post(&parent_sem);
+
+}
+
+/**
+ * @brief Parent sends the child a message through the pipe
+ *
+ */
+void tell_child() {
+  write(pipefd_ctp[1],"Ping!",6);
+  //printf("Parent sent a message to child!\n");
+
+  printf("Parent: Ping!\n");//ToDo:Remove
+  sem_post(&child_sem);
 }
 
 /**
@@ -35,17 +55,14 @@ void tell_parent() {
  */
 void wait_parent() {
   char buf[6];
-  read(pipefd_ptc[0],buf,6);
-  printf("Child received %s from the parent!\n", buf);
+
+  sem_wait(&parent_sem);
+  read(pipefd_ctp[0],buf,6);
+
+  //printf("Parent received %s from the child!\n", buf);
+  printf("Child received '%s' from the parent!\n", buf);//ToDo:Remove
 }
-/**
- * @brief Parent sends the child a message through the pipe
- *
- */
-void tell_child() {
-  write(pipefd_ctp[1],"Ping!",6);
-  printf("Parent sent a message to child!\n");
-}
+
 
 /**
  * @brief Read the message out of the pipe that was sent by the child
@@ -53,11 +70,19 @@ void tell_child() {
  */
 void wait_child() {
   char buf[6];
-  read(pipefd_ctp[0],buf,6);
-  printf("Parent received %s from the child!\n", buf);
+
+  sem_wait(&child_sem);
+  read(pipefd_ptc[0],buf,6);
+
+  //printf("Child received %s from the parent!\n", buf);
+  printf("Parent received '%s' from the child!\n", buf);//ToDo:Remove
 }
 
 int main(int argc, char* argv[]) {
+
+  sem_init(&parent_sem, 0, 1);
+  sem_init(&child_sem, 0, 1);
+
   create_pipes();
 
   //create child
@@ -76,19 +101,24 @@ int main(int argc, char* argv[]) {
     // Parent process
     // TODO: You might need pipe handling here
     while (1) {
-      sleep(rand() % 2 + 1);
+      sleep(1);
       tell_child();
       wait_child();
+      puts("");//ToDO:Remove
     }
   }
   else {
     // Child process
     // TODO: You might need pipe handling here
     while (1) {
-      sleep(rand() % 2 + 1);
+      sleep(1);
       wait_parent();
       tell_parent();
+      puts("");//ToDo:Remove
     }
   }
+
+  sem_destroy(&parent_sem);
+  sem_destroy(&child_sem);
   return 0;
 }
