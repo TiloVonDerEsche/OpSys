@@ -32,8 +32,8 @@ void tell_parent() {
   write(pipefd_ptc[1],"Pong!",6);
 
 
-  //printf("Child sent a message to parent!\n");
-  printf("Child: Pong!\n");//ToDo:Remove
+  printf("Child sent a message to parent!\n");
+  //printf("Child: Pong!\n");//ToDo:Remove
   sem_post(&parent_sem);
 
 }
@@ -44,9 +44,9 @@ void tell_parent() {
  */
 void tell_child() {
   write(pipefd_ctp[1],"Ping!",6);
-  //printf("Parent sent a message to child!\n");
+  printf("Parent sent a message to child!\n");
 
-  printf("Parent: Ping!\n");//ToDo:Remove
+  //printf("Parent: Ping!\n");//ToDo:Remove
   sem_post(&child_sem);
 }
 
@@ -59,8 +59,8 @@ void wait_parent() {
   sem_wait(&parent_sem);
   read(pipefd_ctp[0],buf,6);
 
-  //printf("Parent received %s from the child!\n", buf);
-  printf("Child received '%s' from the parent!\n", buf);//ToDo:Remove
+  printf("Parent received %s from the child!\n", buf);
+  //printf("Child received '%s' from the parent!\n", buf);//ToDo:Remove
 }
 
 
@@ -74,8 +74,8 @@ void wait_child() {
   sem_wait(&child_sem);
   read(pipefd_ptc[0],buf,6);
 
-  //printf("Child received %s from the parent!\n", buf);
-  printf("Parent received '%s' from the child!\n", buf);//ToDo:Remove
+  printf("Child received %s from the parent!\n", buf);
+  //printf("Parent received '%s' from the child!\n", buf);//ToDo:Remove
 }
 
 int main(int argc, char* argv[]) {
@@ -104,7 +104,7 @@ int main(int argc, char* argv[]) {
       sleep(1);
       tell_child();
       wait_child();
-      puts("");//ToDO:Remove
+      //puts("");//ToDO:Remove
     }
   }
   else {
@@ -114,7 +114,7 @@ int main(int argc, char* argv[]) {
       sleep(1);
       wait_parent();
       tell_parent();
-      puts("");//ToDo:Remove
+      //puts("");//ToDo:Remove
     }
   }
 
